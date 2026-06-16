@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>糖宣人機</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <span class="candy-icon" aria-hidden="true">🍬</span>
+      <h1 class="title">糖宣人機</h1>
+    </header>
+
+    <main class="chat" id="chat" aria-live="polite" aria-label="聊天訊息"></main>
+
+    <form class="composer" id="composer">
+      <div class="composer-wrap">
+        <input
+          type="text"
+          id="messageInput"
+          class="composer-input"
+          placeholder="跟糖宣說點什麼…"
+          autocomplete="off"
+          maxlength="200"
+          aria-label="輸入訊息"
+        />
+        <button type="submit" class="send-btn" id="sendBtn">送出</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
