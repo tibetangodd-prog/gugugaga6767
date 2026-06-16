@@ -15,7 +15,7 @@
   // 只要確保這把金鑰所在的 Google Cloud 專案沒有連結任何付款方式即可。
   // 如果額度被濫用，直接去 AI Studio 刪掉這把金鑰、申請一把新的換上即可。
   // ============================================================
-  const GEMINI_API_KEY = "PASTE_YOUR_FREE_GEMINI_API_KEY_HERE";
+  const GEMINI_API_KEY = "AQ.Ab8RN6LYydWwh4zEgHgzSr_mUDOOoGYEMV3lE5GypXw5JJtuZg";
 
   // 想換模型只要改這個字串，例如想要更省額度可以換成 "gemini-2.5-flash-lite"
   const MODEL = "gemini-2.5-flash";
