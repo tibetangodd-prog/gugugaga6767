@@ -5,123 +5,78 @@
   const sendBtn = document.getElementById("sendBtn");
 
   // ============================================================
-  // 把你自己在 Google AI Studio 申請的免費 Gemini API 金鑰貼在這裡，
-  // 訪客就完全不用自己申請金鑰，打開網站就能直接聊天。
-  // 取得免費金鑰：https://aistudio.google.com/apikey
-  //
-  // 注意：這把金鑰會直接出現在公開的網頁程式碼裡，任何訪客只要打開
-  // 瀏覽器開發者工具都能看到它，理論上可能被拿去消耗你的每日免費額度。
-  // 因為是免費額度，最多就是被用完、隔天重置，不會產生任何費用——
-  // 只要確保這把金鑰所在的 Google Cloud 專案沒有連結任何付款方式即可。
-  // 如果額度被濫用，直接去 AI Studio 刪掉這把金鑰、申請一把新的換上即可。
+  // 純關鍵字判斷，不呼叫任何 AI API、不需要任何金鑰。
+  // 純前端、零設定，GitHub Pages 開箱即用，訪客打開就能直接聊天。
+  // 判斷優先順序：互嗆 > 感謝 > 要求做某事 > 誇獎 > 其他（隨機回覆）
+  // 想要更精準，就直接在下面對應的陣列裡增減關鍵字即可。
   // ============================================================
-  const GEMINI_API_KEY = "AQ.Ab8RN6LYydWwh4zEgHgzSr_mUDOOoGYEMV3lE5GypXw5JJtuZg";
 
-  // 想換模型只要改這個字串，例如想要更省額度可以換成 "gemini-2.5-flash-lite"
-  const MODEL = "gemini-2.5-flash";
+  // ---------- 互嗆：命中就直接回嗆，不進入下面的意圖判斷 ----------
+  const INSULT_PATTERNS = [
+    { keyword: "煞筆", reply: "你才煞筆" },
+    { keyword: "傻逼", reply: "你才傻逼" },
+  ];
 
-  // ============================================================
-  // 用 Google Gemini API（有免費額度，不需要信用卡）當作「簡單 AI agent」。
-  // 由 AI 理解語意來判斷使用者的意圖，而不是用關鍵字比對。
-  // 為了確保回覆內容一定符合需求，AI 只負責「判斷意圖」，
-  // 實際要回的文字仍由下面的 buildReply() 決定，AI 不會自由發揮回覆內容。
-  // ============================================================
-  const SYSTEM_PROMPT = [
-    "你是一個訊息意圖分類器。請判斷使用者傳來的單則訊息屬於以下四種意圖中的哪一種：",
-    "",
-    "1. request：使用者在請求、指示、拜託對方做某件具體的事（例如撰寫、查詢、計算、翻譯、規劃、推薦、提醒、修改等），不論是直接命令或委婉的「可以幫我…嗎」、「麻煩你…」都算。",
-    "2. praise：使用者在稱讚、誇獎對方本身，例如說對方很棒、很聰明、很厲害、很可愛等正向評價。",
-    "3. thanks：使用者在表達感謝，例如謝謝、感謝、多謝。",
-    "4. other：以上三者都不是，例如閒聊、打招呼、抱怨、單純陳述、與請求無關的問題等。",
-    "",
-    "如果一句話同時包含感謝與請求（例如「謝謝你幫我查」），請判斷為 thanks。",
-    "只能回傳一個意圖，不要加任何說明文字。",
-  ].join("\n");
+  // ---------- 感謝 ----------
+  const THANKS_KEYWORDS = [
+    "謝謝", "謝謝你", "謝謝妳", "謝謝您", "謝謝大家",
+    "感謝", "感謝你", "感謝妳", "感謝您", "多謝", "多謝你",
+    "謝了", "謝啦", "謝拉", "感恩", "感恩你", "感恩在心",
+    "太感謝了", "非常感謝", "十分感謝", "萬分感謝", "感激", "感激不盡",
+    "揪甘心", "真感心", "阿里嘎多", "謝主隆恩",
+    "thank you", "thank u", "thanks", "thank", "thx", "tks", "tysm",
+    "3q", "三q", "三Q", "3Q",
+  ];
 
-  const RESPONSE_SCHEMA = {
-    type: "object",
-    properties: {
-      intent: {
-        type: "string",
-        enum: ["request", "praise", "thanks", "other"],
-      },
-    },
-    required: ["intent"],
-  };
+  // ---------- 誇獎 ----------
+  const PRAISE_KEYWORDS = [
+    "好棒", "真棒", "太棒了", "超棒", "很棒", "棒棒", "棒呆", "棒欸", "棒喔",
+    "厲害", "好厲害", "真厲害", "太厲害了", "超厲害", "很厲害", "厲害了",
+    "厲害欸", "厲害喔", "好強", "真強", "太強了", "超強", "很強", "強欸",
+    "強喔", "強到", "聰明", "好聰明", "真聰明", "太聰明了", "超聰明",
+    "很聰明", "可愛", "好可愛", "真可愛", "超可愛", "太可愛了", "萌",
+    "好萌", "卡哇伊", "漂亮", "好漂亮", "真漂亮", "美", "好美", "帥",
+    "好帥", "真帥", "超帥", "讚", "真讚", "超讚", "給讚", "給力", "神",
+    "太神了", "真神", "神人", "大神", "是神", "牛", "真牛", "太牛了",
+    "牛逼", "屌", "好屌", "真屌", "超屌", "優秀", "很優秀", "不錯",
+    "很不錯", "真不錯", "完美", "太完美了", "滿分", "了不起", "佩服",
+    "我服了", "服了你", "amazing", "awesome", "great", "nice", "cool",
+    "perfect", "smart", "good job", "well done", "genius",
+  ];
 
-  // ---------- 呼叫 Gemini API 做意圖判斷 ----------
-  async function classifyIntent(text) {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === "PASTE_YOUR_FREE_GEMINI_API_KEY_HERE") {
-      const err = new Error("尚未在 script.js 設定 Gemini API 金鑰");
-      err.code = "NOT_CONFIGURED";
-      throw err;
-    }
+  // ---------- 要求做某事 ----------
+  const REQUEST_KEYWORDS = [
+    "幫我", "幫忙", "幫個忙", "幫幫我", "幫一下",
+    "麻煩你", "麻煩妳", "麻煩您", "拜託你", "拜託妳", "拜託",
+    "求你", "求妳", "求求你", "可以幫", "能不能", "能否", "可否",
+    "你可以", "妳可以", "你能", "妳能", "您可以", "您能",
+    "請幫", "請你", "請妳", "請您",
+    "給我", "給個", "告訴我", "教我", "跟我說", "順便幫", "可以的話",
+    "寫一個", "寫個", "寫一篇", "畫一個", "畫個", "做一個", "做個",
+    "弄一個", "弄個", "來一個", "給一個", "幫我寫", "幫我做", "幫我查",
+    "查一下", "查查", "查詢", "搜尋", "搜一下", "搜尋一下", "找一下",
+    "幫忙找", "翻譯", "幫我翻", "解釋", "說明一下", "講解", "規劃",
+    "安排", "設計一個", "修改", "改一下", "幫我改", "整理", "統整",
+    "總結", "摘要", "推薦", "建議", "提醒我", "設定", "預約", "訂一個",
+    "列出", "列舉", "生成", "產生", "製作", "編寫", "撰寫", "創作",
+    "計算", "算一下", "幫我算", "去",
+    "please", "can you", "could you", "would you", "help me", "can u",
+    "plz", "pls",
+  ];
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
-
-    let res;
-    try {
-      res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: [{ role: "user", parts: [{ text }] }],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: 50,
-            responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
-          },
-        }),
-      });
-    } catch (networkErr) {
-      const err = new Error("網路連線失敗");
-      err.code = "NETWORK";
-      throw err;
-    }
-
-    if (!res.ok) {
-      const err = new Error(`Gemini API 錯誤（${res.status}）`);
-      if (res.status === 400 || res.status === 403) {
-        err.code = "BAD_KEY";
-      } else if (res.status === 429) {
-        err.code = "RATE_LIMIT";
-      } else {
-        err.code = "API_ERROR";
-      }
-      throw err;
-    }
-
-    const data = await res.json();
-    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!raw) {
-      const err = new Error("AI 沒有回應內容");
-      err.code = "EMPTY";
-      throw err;
-    }
-
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      const err = new Error("AI 回應格式不是 JSON");
-      err.code = "PARSE";
-      throw err;
-    }
-
-    const validIntents = ["request", "praise", "thanks", "other"];
-    return validIntents.includes(parsed.intent) ? parsed.intent : "other";
-  }
-
-  // ---------- 互嗆偵測：不用 AI，直接關鍵字比對，命中就跳過 AI 分類 ----------
   function detectInsultMirror(text) {
-    if (text.includes("煞筆")) return "你才煞筆";
-    if (text.includes("傻逼")) return "你才傻逼";
-    return null;
+    const hit = INSULT_PATTERNS.find((item) => text.includes(item.keyword));
+    return hit ? hit.reply : null;
   }
 
-  // 意圖判斷出來後，由這支程式決定固定的回覆文字（不交給 AI 自由發揮）
+  function classifyIntent(text) {
+    if (THANKS_KEYWORDS.some((kw) => text.includes(kw))) return "thanks";
+    if (REQUEST_KEYWORDS.some((kw) => text.includes(kw))) return "request";
+    if (PRAISE_KEYWORDS.some((kw) => text.includes(kw))) return "praise";
+    return "other";
+  }
+
+  // 意圖判斷出來後，由這支程式決定固定的回覆文字
   function buildReply(intent) {
     switch (intent) {
       case "request":
@@ -134,21 +89,6 @@
         const options = ["好強", "？", "咕咕嘎嘎", "阿巴阿巴"];
         return options[Math.floor(Math.random() * options.length)];
       }
-    }
-  }
-
-  function errorMessageFor(err) {
-    switch (err.code) {
-      case "NOT_CONFIGURED":
-        return "（給網站建立者的提醒：還沒在 script.js 設定 Gemini API 金鑰，請依照 README 設定後再部署。）";
-      case "BAD_KEY":
-        return "（給網站建立者的提醒：Gemini 金鑰好像失效或沒有權限，去 AI Studio 檢查一下。）";
-      case "RATE_LIMIT":
-        return "今天的免費額度好像用完了，明天再試試看～";
-      case "NETWORK":
-        return "連不上網路，檢查一下連線再試一次吧。";
-      default:
-        return "糖宣連不到 AI 大腦，稍後再試一次看看吧。";
     }
   }
 
@@ -174,7 +114,7 @@
     chat.scrollTop = chat.scrollHeight;
   }
 
-  async function handleSend(event) {
+  function handleSend(event) {
     event.preventDefault();
     const text = input.value;
     if (!text.trim()) return;
@@ -185,28 +125,15 @@
     sendBtn.disabled = true;
 
     const typingEl = showTyping();
+    const delay = 300 + Math.random() * 400;
 
-    const mirrorReply = detectInsultMirror(text);
-    if (mirrorReply) {
-      setTimeout(() => {
-        typingEl.remove();
-        appendMessage(mirrorReply, "bot");
-        sendBtn.disabled = false;
-      }, 350);
-      return;
-    }
-
-    try {
-      const intent = await classifyIntent(text);
+    setTimeout(() => {
       typingEl.remove();
-      appendMessage(buildReply(intent), "bot");
-    } catch (err) {
-      console.error(err);
-      typingEl.remove();
-      appendMessage(errorMessageFor(err), "error");
-    } finally {
+      const mirrorReply = detectInsultMirror(text);
+      const reply = mirrorReply || buildReply(classifyIntent(text));
+      appendMessage(reply, "bot");
       sendBtn.disabled = false;
-    }
+    }, delay);
   }
 
   form.addEventListener("submit", handleSend);
