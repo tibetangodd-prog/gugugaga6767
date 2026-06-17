@@ -7,7 +7,7 @@
   // ============================================================
   // 純關鍵字判斷，不呼叫任何 AI API、不需要任何金鑰。
   // 純前端、零設定，GitHub Pages 開箱即用，訪客打開就能直接聊天。
-  // 判斷優先順序：互嗆 > 感謝 > 要求做某事 > 誇獎 > 其他（隨機回覆）
+  // 判斷優先順序：互嗆 > 感謝 > 要求做某事 > 誇獎 > 打招呼 > 其他（隨機回覆）
   // 想要更精準，就直接在下面對應的陣列裡增減關鍵字即可。
   // ============================================================
 
@@ -16,6 +16,9 @@
     { keyword: "煞筆", reply: "你才煞筆" },
     { keyword: "傻逼", reply: "你才傻逼" },
   ];
+
+  // ---------- 打招呼：命中就直接回「泥豪」，不進入下面的意圖判斷 ----------
+  const GREETING_KEYWORDS = ["你好", "妳好", "泥豪", "尼豪"];
 
   // ---------- 感謝 ----------
   const THANKS_KEYWORDS = [
@@ -69,11 +72,31 @@
     return hit ? hit.reply : null;
   }
 
+  function detectGreeting(text) {
+    return GREETING_KEYWORDS.some((kw) => text.includes(kw)) ? "泥豪" : null;
+  }
+
   function classifyIntent(text) {
     if (THANKS_KEYWORDS.some((kw) => text.includes(kw))) return "thanks";
     if (REQUEST_KEYWORDS.some((kw) => text.includes(kw))) return "request";
     if (PRAISE_KEYWORDS.some((kw) => text.includes(kw))) return "praise";
     return "other";
+  }
+
+  // 統一在這裡決定最終回覆，優先順序：互嗆 > 感謝 > 要求做某事 > 誇獎 > 打招呼 > 其他
+  // 打招呼放在感謝/要求/誇獎後面，是為了避免「你好棒」「你好厲害」這類句子
+  // 因為包含「你好」兩個字，被搶先判斷成單純打招呼而蓋掉真正的誇獎語意。
+  function getReply(text) {
+    const mirrorReply = detectInsultMirror(text);
+    if (mirrorReply) return mirrorReply;
+
+    const intent = classifyIntent(text);
+    if (intent !== "other") return buildReply(intent);
+
+    const greetingReply = detectGreeting(text);
+    if (greetingReply) return greetingReply;
+
+    return buildReply("other");
   }
 
   // 意圖判斷出來後，由這支程式決定固定的回覆文字
@@ -129,9 +152,7 @@
 
     setTimeout(() => {
       typingEl.remove();
-      const mirrorReply = detectInsultMirror(text);
-      const reply = mirrorReply || buildReply(classifyIntent(text));
-      appendMessage(reply, "bot");
+      appendMessage(getReply(text), "bot");
       sendBtn.disabled = false;
     }, delay);
   }
