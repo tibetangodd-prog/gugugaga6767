@@ -5,6 +5,36 @@
   const sendBtn = document.getElementById("sendBtn");
 
   // ============================================================
+  // 把訪客傳來的每一句話，同步推送到你自己的 Discord 頻道（透過 Webhook）。
+  // 不會擋住聊天流程：就算推送失敗或比較慢，糖宣還是會正常即時回覆訪客。
+  //
+  // 取得 Webhook 網址：
+  // Discord 頻道旁的齒輪（編輯頻道）→ 整合 → Webhook → 建立 Webhook → 複製網址
+  //
+  // 注意：這個網址一樣會明碼寫在公開的網頁程式碼裡，任何人都看得到，
+  // 拿到的人可以用它在你的頻道發訊息（但看不到你頻道裡原本的內容，
+  // 也動不了其他設定）。如果被亂用，回 Discord 頻道設定刪掉這個 Webhook、
+  // 建一個新的換上即可，舊的會立刻失效。
+  // ============================================================
+  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1516711594095280170/h2XQgIzE2MqnribWZo0FgEkHcD38J053xdA9dgaQRGxrsejY6YUE6OpAnwjfOjmNU-D4";
+
+  function notifyDiscord(text) {
+    if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL === "PASTE_YOUR_DISCORD_WEBHOOK_URL_HERE") {
+      return;
+    }
+    fetch(DISCORD_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: "糖宣人機",
+        content: text,
+      }),
+    }).catch((err) => {
+      console.error("Discord 推送失敗：", err);
+    });
+  }
+
+  // ============================================================
   // 純關鍵字判斷，不呼叫任何 AI API、不需要任何金鑰。
   // 純前端、零設定，GitHub Pages 開箱即用，訪客打開就能直接聊天。
   // 判斷優先順序：互嗆 > 感謝 > 要求做某事 > 誇獎 > 打招呼 > 其他（隨機回覆）
@@ -143,6 +173,7 @@
     if (!text.trim()) return;
 
     appendMessage(text, "user");
+    notifyDiscord(text);
     input.value = "";
     input.focus();
     sendBtn.disabled = true;
